@@ -84,6 +84,12 @@
             right: 80px;
         }
 
+        /* Make Joachim bigger */
+        .sprite[src*="Joachim"] {
+            max-height: 400px;
+            max-width: 310px;
+        }
+
         #dialogue-box {
             position: absolute;
             bottom: 20px;
@@ -110,14 +116,15 @@
         #speaker-name {
             position: absolute;
             top: 18px;
-            font-size: 16px;
-            color: #3d2817;
+            font-size: 17px;
+            color: #000000;
             text-shadow: none;
             font-weight: bold;
+            max-width: 200px;
         }
 
         #dialogue-box.right-speaker #speaker-name {
-            right: 80px;
+            right: 70px;
             left: auto;
         }
 
@@ -130,9 +137,9 @@
             top: 55px;
             left: 60px;
             right: 60px;
-            font-size: 15px;
+            font-size: 16px;
             line-height: 1.5;
-            color: #3d2817;
+            color: #000000;
             text-shadow: none;
             min-height: 80px;
         }
@@ -142,7 +149,7 @@
             bottom: 20px;
             right: 70px;
             font-size: 12px;
-            color: #3d2817;
+            color: #000000;
             animation: blink 1s infinite;
         }
 
@@ -153,7 +160,7 @@
 
         #choices-container {
             position: absolute;
-            top: 50%;
+            top: 40%;
             left: 50%;
             transform: translate(-50%, -50%);
             display: none;
@@ -356,6 +363,7 @@
             currentDialogueIndex: 0,
             dialogue: [],
             choices: [],
+            currentRightCharacter: null, // Track which character is on the right
             pathTaken: {
                 street: null, // 'west' or 'east'
                 factory: null, // 'side' or 'window'
@@ -368,7 +376,7 @@
             joachim: 'Joachim_Sprite.png',
             chad: 'Chad_sprite.png',
             meg: 'Meg_Sprite_V2.png',
-            mush: 'Mush_Sprite.jpg',
+            mush: 'Mush_Sprite.png',
             adrestia: 'Adrestia_Sprite.png',
             auran: 'Auran_Sprite.png',
             santa: 'Magister_Clausus_Evil_Sprite.png',
@@ -388,7 +396,8 @@
             factory: 'Scene_4__the_yuletide_factory.png',
             workshop: 'Scene_5a__the_workshop.png',
             hallway: 'Scene_5b__Hallway.png',
-            office: 'Scene_6__The_Office.png'
+            office: 'Scene_6__The_Office.png',
+            barFinale: 'Scene_1__The_Bar.png' // Use same bar background for finale
         };
 
         // DOM elements
@@ -595,6 +604,7 @@
             game.currentDialogueIndex = 0;
             game.dialogue = scenes[sceneName];
             game.choices = [];
+            game.currentRightCharacter = null; // Reset right character for new scene
 
             // Set background
             background.src = backgrounds[sceneName];
@@ -645,7 +655,21 @@
                     spriteImg.src = sprites[current.sprite];
                     spriteImg.className = `sprite right active slide-up`;
                     spriteContainer.appendChild(spriteImg);
+                    
+                    // Remember this character for the scene
+                    game.currentRightCharacter = current.sprite;
                 }
+            } else if (game.currentRightCharacter) {
+                // No sprite for this line (narrator, etc), but keep showing the last right character
+                const joachimSprite = document.createElement('img');
+                joachimSprite.src = sprites.joachim;
+                joachimSprite.className = `sprite left`;
+                spriteContainer.appendChild(joachimSprite);
+                
+                const rightSprite = document.createElement('img');
+                rightSprite.src = sprites[game.currentRightCharacter];
+                rightSprite.className = `sprite right`;
+                spriteContainer.appendChild(rightSprite);
             }
 
             // Show dialogue
