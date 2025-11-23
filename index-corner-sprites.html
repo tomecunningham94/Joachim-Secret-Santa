@@ -48,20 +48,21 @@
 
         #sprite-container {
             position: absolute;
-            bottom: 230px;
+            bottom: 0;
             left: 0;
             right: 0;
-            height: 350px;
+            height: 500px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
             pointer-events: none;
-            padding: 0 80px;
+            padding: 0;
+            z-index: 1;
         }
 
         .sprite {
-            max-height: 320px;
-            max-width: 250px;
+            max-height: 450px;
+            max-width: 350px;
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
@@ -73,21 +74,23 @@
         .sprite.active {
             filter: brightness(1);
             transform: scale(1.05);
-            z-index: 10;
+            z-index: 2;
         }
 
         .sprite.left {
-            left: 80px;
+            left: 0;
+            bottom: 0;
         }
 
         .sprite.right {
-            right: 80px;
+            right: 0;
+            bottom: 0;
         }
 
         /* Make Joachim bigger */
         .sprite[src*="Joachim"] {
-            max-height: 460px;
-            max-width: 360px;
+            max-height: 520px;
+            max-width: 400px;
         }
 
         #dialogue-box {
@@ -103,6 +106,7 @@
             padding: 0;
             display: none;
             image-rendering: pixelated;
+            z-index: 5;
         }
 
         #dialogue-box.right-speaker {
