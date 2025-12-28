@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joachim Saves the Solstice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Trebuchet MS', 'Lucida Grande', 'Lucida Sans Unicode', sans-serif;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 960px;
+            height: 640px;
+            position: relative;
+            background: #000;
+            border: 4px solid #333;
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+        }
+
+        #game-screen {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #background {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        #sprite-container {
+            position: absolute;
+            bottom: 230px;
+            left: 0;
+            right: 0;
+            height: 350px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+            padding: 0 80px;
+        }
+
+        .sprite {
+            max-height: 320px;
+            max-width: 250px;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            filter: brightness(0.7);
+            transition: filter 0.3s, transform 0.3s;
+            position: absolute;
+        }
+
+        .sprite.active {
+            filter: brightness(1);
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .sprite.left {
+            left: 20px;
+        }
+
+        .sprite.right {
+            right: 100px;
+        }
+
+        /* Make Joachim bigger */
+        .sprite[src*="Joachim"] {
+            max-height: 460px;
+            max-width: 360px;
+        }
+
+        /* Make Chad bigger */
+        .sprite[src*="Chad"] {
+            max-height: 384px;
+            max-width: 300px;
+        }
+
+        #dialogue-box {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 1100px;
+            height: 180px;
+            background: url('Scroll_-_Name_Left.png') no-repeat center;
+            background-size: 100% 100%;
+            padding: 0;
+            display: none;
+            image-rendering: pixelated;
+        }
+
+        #dialogue-box.right-speaker {
+            background-image: url('Scroll_-_Name_Right.png');
+        }
+
+        #dialogue-box.visible {
+            display: block;
+        }
+
+        #speaker-name {
+            position: absolute;
+            top: 18px;
+            font-size: 17px;
+            color: #000000;
+            text-shadow: none;
+            font-weight: bold;
+            max-width: 220px;
+        }
+
+        #dialogue-box.right-speaker #speaker-name {
+            right: 35px;
+            left: auto;
+        }
+
+        #dialogue-box:not(.right-speaker) #speaker-name {
+            left: 55px;
+        }
+
+        #dialogue-text {
+            position: absolute;
+            top: 55px;
+            left: 60px;
+            right: 60px;
+            font-size: 17px;
+            line-height: 1.5;
+            color: #000000;
+            text-shadow: none;
+            min-height: 80px;
+        }
+
+        #continue-indicator {
+            position: absolute;
+            bottom: 20px;
+            right: 70px;
+            font-size: 12px;
+            color: #000000;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        #choices-container {
+            position: absolute;
+            top: 50px !important;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            width: 70%;
+            max-width: 600px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 30px;
+            border: 4px solid #8b7355;
+            border-radius: 10px;
+            z-index: 9999;
+        }
+
+        #choices-container.visible {
+            display: flex;
+        }
+
+        .choice-button {
+            background: linear-gradient(to bottom, #2a4a7a, #1a2a4a);
+            border: 3px solid #4a6a9a;
+            color: #fff;
+            padding: 15px 25px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            font-family: inherit;
+            text-shadow: 2px 2px 0 #000;
+            line-height: 1.4;
+            white-space: normal;
+            min-height: 50px;
+            border-radius: 5px;
+        }
+
+        .choice-button:hover {
+            background: linear-gradient(to bottom, #3a5a8a, #2a3a5a);
+            border-color: #5a7aaa;
+            transform: translateX(5px);
+        }
+
+        #title-screen {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #1a0a2e 0%, #0f051d 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #title-screen.hidden {
+            display: none;
+        }
+
+        #game-title {
+            font-size: 32px;
+            color: #ff4444;
+            text-shadow: 4px 4px 0 #000, 0 0 20px #ff0000;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        #subtitle {
+            font-size: 16px;
+            color: #ffd700;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        #start-button {
+            background: linear-gradient(to bottom, #ff4444, #cc0000);
+            border: 4px solid #fff;
+            color: #fff;
+            padding: 20px 40px;
+            font-size: 16px;
+            cursor: pointer;
+            font-family: inherit;
+            text-shadow: 2px 2px 0 #000;
+            transition: all 0.3s;
+        }
+
+        #start-button:hover {
+            background: linear-gradient(to bottom, #ff6666, #dd2222);
+            transform: scale(1.05);
+        }
+
+        #credits-screen {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #0a2e1a 0%, #051d0f 100%);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #credits-screen.visible {
+            display: flex;
+        }
+
+        #credits-title {
+            font-size: 48px;
+            color: #44ff44;
+            text-shadow: 4px 4px 0 #000, 0 0 30px #00ff00;
+            margin-bottom: 30px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        #credits-subtitle {
+            font-size: 18px;
+            color: #ffd700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        #credits-message {
+            font-size: 14px;
+            color: #ccc;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .slide-up {
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Audio elements for sound effects -->
+    <audio id="click-sound" preload="auto">
+        <source src="https://tomecunningham94.github.io/Joachim-Secret-Santa/click.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="choice-sound" preload="auto">
+        <source src="https://tomecunningham94.github.io/Joachim-Secret-Santa/choice.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="background-music" loop preload="auto">
+        <source src="https://tomecunningham94.github.io/Joachim-Secret-Santa/background-music.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="game-container">
+        <div id="game-screen">
+            <img id="background" src="" alt="Background">
+            
+            <div id="sprite-container">
+                <!-- Sprites will be dynamically added here -->
+            </div>
+
+            <div id="dialogue-box">
+                <div id="speaker-name"></div>
+                <div id="dialogue-text"></div>
+                <div id="continue-indicator">▼ SPACE</div>
+                <div id="choices-container"></div>
+            </div>
+        </div>
+
+        <div id="title-screen">
+            <h1 id="game-title">JOACHIM SAVES<br>THE SOLSTICE</h1>
+            <p id="subtitle">A Winter Solstice Adventure</p>
+            <button id="start-button">START GAME</button>
+        </div>
+
+        <div id="credits-screen">
+            <h1 id="credits-title">MERRY CHRISTMAS MATT</h1>
+            <p id="credits-subtitle">🎄 Happy Holidays! 🎄</p>
+            <p id="credits-message">Thanks for another great year of D&D!</p>
+        </div>
+
+        <!-- Audio elements -->
+        <audio id="click-sound" preload="auto">
+            <source src="click.mp3" type="audio/mpeg">
+            <source src="click.ogg" type="audio/ogg">
+        </audio>
+        <audio id="choice-sound" preload="auto">
+            <source src="choice.mp3" type="audio/mpeg">
+            <source src="choice.ogg" type="audio/ogg">
+        </audio>
+        <audio id="bgm" loop>
+            <source src="background-music.mp3" type="audio/mpeg">
+            <source src="background-music.ogg" type="audio/ogg">
+        </audio>
+    </div>
+
+    <script>
+        // Game state management
+        const game = {
+            currentScene: null,
+            currentDialogueIndex: 0,
+            dialogue: [],
+            choices: [],
+            currentRightCharacter: null, // Track which character is on the right
+            pathTaken: {
+                street: null, // 'west' or 'east'
+                gym: null, // 'complete' after choice is made
+                factory: null, // 'side' or 'window'
+                finalChoice: null // for the office scene
+            }
+        };
+
+        // Asset paths
+        const sprites = {
+            joachim: 'Joachim_Sprite.png',
+            chad: 'Chad_sprite.png',
+            meg: 'Meg_Sprite_V2.png',
+            mush: 'Mush_Sprite.png',
+            adrestia: 'Adrestia_Sprite.png',
+            auran: 'Auran_Sprite.png',
+            santa: 'Magister_Clausus_Evil_Sprite.png',
+            bartender: 'Bartender_sprite.png',
+            buddy: 'Buddy_the_elf.png',
+            sharakos: 'Sharakos_Sprite.png',
+            jd: 'JD_Sprite.png',
+            rudolphus: 'Rudolphus.png',
+            rudolphusAuran: 'Rudolphus_Auran.png'
+        };
+
+        const backgrounds = {
+            bar: 'Scene_1__The_Bar.png',
+            street: 'Scene_2__The_street.png',
+            gym: 'Scene_3a__The_Gym.png',
+            forum: 'Scene_3b__The_Thoroughfare.png',
+            factory: 'Scene_4__the_yuletide_factory.png',
+            workshop: 'Scene_5a__the_workshop.png',
+            hallway: 'Scene_5b__Hallway.png',
+            office: 'Scene_6__The_Office.png',
+            barFinale: 'Scene_1__The_Bar.png' // Use same bar background for finale
+        };
+
+        // DOM elements
+        const titleScreen = document.getElementById('title-screen');
+        const creditsScreen = document.getElementById('credits-screen');
+        const startButton = document.getElementById('start-button');
+        const background = document.getElementById('background');
+        const spriteContainer = document.getElementById('sprite-container');
+        const dialogueBox = document.getElementById('dialogue-box');
+        const speakerName = document.getElementById('speaker-name');
+        const dialogueText = document.getElementById('dialogue-text');
+        const continueIndicator = document.getElementById('continue-indicator');
+        const choicesContainer = document.getElementById('choices-container');
+
+        // Audio elements
+        const clickSound = document.getElementById('click-sound');
+        const choiceSound = document.getElementById('choice-sound');
+        const bgm = document.getElementById('background-music');
+
+        // Audio functions
+        function playClickSound() {
+            if (clickSound) {
+                clickSound.volume = 0.3; // 30% volume
+                clickSound.currentTime = 0;
+                clickSound.play().catch(e => console.log('Click sound error:', e));
+            }
+        }
+
+        function playChoiceSound() {
+            if (choiceSound) {
+                choiceSound.volume = 0.4; // 40% volume
+                choiceSound.currentTime = 0;
+                choiceSound.play().catch(e => console.log('Choice sound error:', e));
+            }
+        }
+
+        function playBGM() {
+            if (bgm) {
+                bgm.volume = 0.19; // Set to 19% volume (75% of previous 25%)
+                bgm.play().catch(e => console.log('BGM error:', e));
+            }
+        }
+
+        function stopBGM() {
+            bgm.pause();
+            bgm.currentTime = 0;
+        }
+
+        // Scene definitions with all dialogue
+        const scenes = {
+            bar: [
+                { speaker: 'Buddy', sprite: 'buddy', position: 'right', text: "…And don't get me started on the working hours! Magister Clausus is talking about increasing the minimum shift to 20 hours in the run up to the winter solstice. 20 hours!" },
+                { speaker: 'Barkeep', sprite: 'bartender', position: 'right', text: "Anything else for you, sir?" },
+                { speaker: 'Sharakos', sprite: 'sharakos', position: 'right', text: "[THE SOULS OF THE CORRUPT]." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Just an ale please." },
+                { speaker: 'Sharakos', sprite: 'sharakos', position: 'right', text: "[NOOO]" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "And maybe some peanuts." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "That's rough, Buddy. And this 'Magister Clausus', he's your supervisor?" },
+                { speaker: 'Buddy', sprite: 'buddy', position: 'right', text: "Supervisor? He's the top dog himself. He runs the whole operation, he even owns the Yuletide Factory where we work. I'm convinced he lives there too - he's always watching." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "[Have factories been invented yet?]" },
+                { speaker: 'JD', sprite: 'jd', position: 'right', text: "[Don't worry about it.]" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Don't worry, Buddy. Call it karma, retribution - it usually seems to find people like Magister Clausus one way or another." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "[We have work to do. I have work to do.]" },
+                { speaker: 'Sharakos', sprite: 'sharakos', position: 'right', text: "[BUT YOU LIKE, JUST BOUGHT A BEER.]" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "[Vengeance will parch my thirst.]" },
+                { speaker: 'Sharakos', sprite: 'sharakos', position: 'right', text: "[OH MY GOD.]" },
+                { speaker: 'Mush', sprite: 'mush', position: 'right', text: "Awful late to be heading out into the cold, no?" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "I just want to get some air. I find these settings a bit…crowded." },
+                { speaker: 'Mush', sprite: 'mush', position: 'right', text: "Right well if you had said that before we booked then-" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "It's fine" },
+                { speaker: 'Mush', sprite: 'mush', position: 'right', text: "-we could have found a less crowded tavern to stay at-" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "It's fine, it's fine" },
+                { speaker: 'Mush', sprite: 'mush', position: 'right', text: "-rather than booking this one and now you're not happy with it." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "It's fine, honestly. And I'll be back before you know it." },
+                { speaker: 'Mush', sprite: 'mush', position: 'right', text: "Alright. I'm off to get some rest - at my age it's extra important, particularly if you want to keep living out the remainder of a long and fruitful life, which I definitely will be." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Strange way to phrase it." },
+                { speaker: 'Sharakos', sprite: 'sharakos', position: 'right', text: "[VENGEANCE]" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Right. Got to go!" }
+            ],
+            street: [
+                { speaker: 'Narrator', sprite: null, position: null, text: "<strong><em>Joachim walks up a cobbled street with snow falling down. He pauses in the middle as he hears a commotion from the side.</em></strong>" },
+                { speaker: '???', sprite: null, position: null, text: "Hey little lady, what are yo-OH GODS." },
+                { speaker: 'Familiar voice', sprite: null, position: null, text: "Hey! Stay! Still!" },
+                { speaker: '???', sprite: null, position: null, text: "[Garbled crying]." },
+                { speaker: 'Meg', sprite: 'meg', position: 'right', text: "Oh hiya Joachim! What brings you to this nice deserted stretch of road?" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Just out for a stroll… What was that commotion, is everything ok?" },
+                { speaker: 'Meg', sprite: 'meg', position: 'right', text: "Yep! Dandy! Swell! Dreamy! Splendid! Grand! Great! Brilliant! Stupend-" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Please stop." },
+                { speaker: 'Meg', sprite: 'meg', position: 'right', text: "- Spiffing! Glorious! Groovy! Fabulous!" },
+                { speaker: 'Sharakos', sprite: 'sharakos', position: 'right', text: "[WE COULD SILENCE HER YOU KNOW. NO ONE WOULD KNOW!]" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Meg. MEG! I get it." },
+                { speaker: 'Meg', sprite: 'meg', position: 'right', text: "Great! I mean great that you get it, that wasn't just another word to describe how ok things are after all that comm-" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Meg." },
+                { speaker: 'Meg', sprite: 'meg', position: 'right', text: "Right" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Say, do you know where the Yuletide Factory is?" },
+                { speaker: 'Meg', sprite: 'meg', position: 'right', text: "[Have factories been invented yet?]" },
+                { speaker: 'JD', sprite: 'jd', position: 'right', text: "[Guys I said don't worry about it.]" },
+                { speaker: 'Meg', sprite: 'meg', position: 'right', text: "Yeah, defs! Which means definitely, but shorter. It's just over that bridge to the west!" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Thanks Meg, see you around." }
+            ],
+            gym: [
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "[This definitely doesn't look like the Yuletide Factory… Hey, isn't that- oh no]." },
+                { speaker: 'Chad', sprite: 'chad', position: 'right', text: "Yo yo Joachim, what's a little man like you doing in my temple of iron? You finally decided to it's time to get fucking swole like your hero Chad?" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Hi Chad. And no, I'll never be as 'swole' as you - Meg gave me directions but they sent me here rather than where I needed to get to." },
+                { speaker: 'Chad', sprite: 'chad', position: 'right', text: "Yoooooo Meg sent you to the gym? Does she want you to get ripped? Is there a vibe?" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "No I think she just got the directions wron-" },
+                { speaker: 'Chad', sprite: 'chad', position: 'right', text: "Joachim is there a vibe? I feel like there's definitely a vibe. You want to pull all kinds of tail and bussy like your hero Chad though, you need to get ripped bro. Come on, we'll start with chain squats. You like chains right bro?" }
+            ],
+            forum: [
+                { speaker: 'Narrator', sprite: null, position: null, text: "<strong><em>Joachim walks among marble pillars on a tiled floor. He stops when he realizes he is being followed.</em></strong>" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "You have a very interesting gait." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "…Thank you?" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "You're welcome." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "…" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "…" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "…Was there a reason you were following me just now Adrestia?" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "Yes of course." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "…" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "…" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Would you like to tell me what that reason was?" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "Not particularly" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "…" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Will you tell me anyway please?" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "I was trying to draw you in stride. I got Mush for Secret Savras, and Chad mentioned there was 'a vibe' so I'm going to give him a picture of you." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "That's… nice. Can I see what you've got so far?" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "You may not." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Ok then. Well anyway, I best carry on, I need to find the Yuletide Factory for an errand." },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "[Actually the first factory is widely considered to be water powered silk-mill in Derby, so no factories wouldn't have really existed as a concept in ancient Greece]" },
+                { speaker: 'JD', sprite: 'jd', position: 'right', text: "[You take 5 points of psychic damage Adrestia.]" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "…" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "…" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "…" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "… I'm going now." }
+            ],
+            factory: [
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "[We're here. The Yuletide Factory. I can feel him in there.]" },
+                { speaker: 'Sharakos', sprite: 'sharakos', position: 'right', text: "[VENGEANCE FOR THE EXPLOITED ELVES.]" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "[I think Buddy was a gnome actually.]" },
+                { speaker: 'Sharakos', sprite: 'sharakos', position: 'right', text: "[THEY'RE ALL THE SAME]" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "[Woah, ok. Not one for now but we're going to unpick that later.]" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "[There's a side door round the corner which I think leads through the workshop, or that window up there looks open…]" }
+            ],
+            workshop: [
+                { speaker: 'Taskmaster Rudolphus', sprite: 'rudolphus', position: 'right', text: "Who sent you? Dasheros? Dancera? Prancerius? Vixennia? Cometus? Cupidia? Donnides? Bitzedes? They're all jealous of me, all of them, ever since the Harmonia Magi made me this glowing red nose of power." },
+                { speaker: 'Auran', sprite: 'auran', position: 'right', text: "I'm afraid I have it on the highest authority that you are no longer required for this world my friend." },
+                { speaker: 'Narrator', sprite: null, position: null, text: "Auran waves his hand and Rudolphus falls over, defeated." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "…" },
+                { speaker: 'Auran', sprite: 'auran', position: 'right', text: "Oh heeeey there Joachim. I was just chatting to this here potential client, when he got real aggressive real fast, and boy I simply had to defend myself." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "We really have to stop meeting like this. If I had a silver for every time our nocturnal activities sent us to the same location, I'd have two silver. Which isn't a lot, but it's weird that it's happened twice." },
+                { speaker: 'Auran', sprite: 'auran', position: 'right', text: "Nocturnal activities? My good man whatever do you mean? I was here as a humble envoy of the merchants guild, to perhaps secure a most lucrative new agreement with-" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "I watched you blow up his head Auran." },
+                { speaker: 'Auran', sprite: 'auran', position: 'right', text: "I'm sorry you interpreted my actions that way." },
+                { speaker: 'Sharakos', sprite: 'sharakos', position: 'right', text: "[YIKES.]" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Don't gaslight me, robot." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Just get out of here, I have my own work to complete." }
+            ],
+            hallway: [
+                { speaker: '"Rudolphus"?', sprite: 'rudolphusAuran', position: 'right', text: "Oh uh, hello there my good man. I see you've just come in through the window. I myself also enjoy frequenting windows as a way to enter, and more importantly, exit this building." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Are you ok? Your skin looks a little…saggy." },
+                { speaker: '"Rudolphus"?', sprite: 'rudolphusAuran', position: 'right', text: "I am fantastic, thank you for asking. As a regular human man called Rudolphus, when I am tired I get bags under my eyes. I imagine that is what you, a fellow human man, are referring to?" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Did you just check your own name tag before saying your name?" },
+                { speaker: '"Rudolphus"?', sprite: 'rudolphusAuran', position: 'right', text: "It did look like that didn't it! In fact I was just checking my skin was still on, a very normal and inconspicuous act." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "…" },
+                { speaker: '"Rudolphus"?', sprite: 'rudolphusAuran', position: 'right', text: "…" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "Auran?" },
+                { speaker: 'Auran', sprite: 'auran', position: 'right', text: "Smoke bomb!" },
+                { speaker: 'Narrator', sprite: null, position: null, text: "Auran disappears in a puff of smoke." }
+            ],
+            office: [
+                { speaker: 'Magister Clausus', sprite: 'santa', position: 'right', text: "You! How did you get in here? You're not one of my elves!" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "It doesn't matter how I got in here, what matters is that I'm here now. Also, you employ gnomes, not elves." },
+                { speaker: 'Magister Clausus', sprite: 'santa', position: 'right', text: "They're all the same!" },
+                { speaker: 'Sharakos', sprite: 'sharakos', position: 'right', text: "[SEE?]" },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "I have nothing more to say, and neither do you. Except this:" }
+            ],
+            officeEnd: [
+                { speaker: 'Joachim / Sharakos', sprite: 'joachim', position: 'left', text: "We are Sharakos, the avenger." },
+                { speaker: 'Narrator', sprite: null, position: null, text: "Joachim waves his hands and shoots a bolt of energy at Magister Clausus, defeating him." }
+            ],
+            barFinale: [
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "… and that's where I've been all night." },
+                { speaker: 'Mush', sprite: 'mush', position: 'right', text: "I can't believe you went to an 'anti citrus' rally this late at night. Who even organizes that?" },
+                { speaker: 'Adrestia', sprite: 'adrestia', position: 'right', text: "It does seem unusual." },
+                { speaker: 'Chad', sprite: 'chad', position: 'right', text: "Just eat a lemon man, getting scurvy is such a skill issue." },
+                { speaker: 'Auran', sprite: 'auran', position: 'right', text: "Lemons are bad news, they damage my chrome." },
+                { speaker: 'Meg', sprite: 'meg', position: 'right', text: "I didn't think you were that invested in stopping other people eating fruit." },
+                { speaker: 'Joachim', sprite: 'joachim', position: 'left', text: "I suppose we all have our winter solstice traditions." }
+            ]
+        };
+
+        // Initialize game
+        function init() {
+            startButton.addEventListener('click', startGame);
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function startGame() {
+            playClickSound();
+            titleScreen.classList.add('hidden');
+            playBGM(); // Start background music
+            loadScene('bar');
+        }
+
+        function loadScene(sceneName) {
+            game.currentScene = sceneName;
+            game.currentDialogueIndex = 0;
+            game.dialogue = scenes[sceneName];
+            game.choices = [];
+            game.currentRightCharacter = null; // Reset right character for new scene
+
+            // Set background
+            background.src = backgrounds[sceneName];
+            background.classList.add('fade-in');
+
+            // Show dialogue box and start dialogue
+            dialogueBox.classList.add('visible');
+            showDialogue();
+        }
+
+        function showDialogue() {
+            if (game.currentDialogueIndex >= game.dialogue.length) {
+                handleSceneEnd();
+                return;
+            }
+
+            const current = game.dialogue[game.currentDialogueIndex];
+            
+            // Clear sprites
+            spriteContainer.innerHTML = '';
+
+            // Determine which scroll to use based on speaker
+            if (current.speaker === 'Joachim' || current.speaker === 'Joachim / Sharakos') {
+                dialogueBox.classList.remove('right-speaker');
+            } else if (current.sprite) {
+                dialogueBox.classList.add('right-speaker');
+            }
+
+            // Show sprites if they exist
+            if (current.sprite) {
+                // Joachim speaking on the left
+                if (current.position === 'left') {
+                    const spriteImg = document.createElement('img');
+                    spriteImg.src = sprites[current.sprite];
+                    spriteImg.className = `sprite left active slide-up`;
+                    spriteContainer.appendChild(spriteImg);
+                    
+                    // Keep the right character visible (inactive) if one exists
+                    if (game.currentRightCharacter) {
+                        const rightSprite = document.createElement('img');
+                        rightSprite.src = sprites[game.currentRightCharacter];
+                        rightSprite.className = `sprite right`;
+                        spriteContainer.appendChild(rightSprite);
+                    }
+                }
+                // Show other character on the right
+                else if (current.position === 'right') {
+                    // Also show Joachim on the left (inactive)
+                    const joachimSprite = document.createElement('img');
+                    joachimSprite.src = sprites.joachim;
+                    joachimSprite.className = `sprite left`;
+                    spriteContainer.appendChild(joachimSprite);
+                    
+                    // Show active speaker on the right
+                    const spriteImg = document.createElement('img');
+                    spriteImg.src = sprites[current.sprite];
+                    spriteImg.className = `sprite right active slide-up`;
+                    spriteContainer.appendChild(spriteImg);
+                    
+                    // Only update currentRightCharacter for main NPCs, not temporary speakers
+                    // Don't replace with Sharakos or JD (they're internal dialogue/narrators)
+                    if (current.sprite !== 'sharakos' && current.sprite !== 'jd') {
+                        game.currentRightCharacter = current.sprite;
+                    }
+                }
+            } else if (game.currentRightCharacter) {
+                // No sprite for this line (narrator, etc), but keep showing the last right character
+                const joachimSprite = document.createElement('img');
+                joachimSprite.src = sprites.joachim;
+                joachimSprite.className = `sprite left`;
+                spriteContainer.appendChild(joachimSprite);
+                
+                const rightSprite = document.createElement('img');
+                rightSprite.src = sprites[game.currentRightCharacter];
+                rightSprite.className = `sprite right`;
+                spriteContainer.appendChild(rightSprite);
+            }
+
+            // Show dialogue
+            speakerName.textContent = current.speaker;
+            dialogueText.innerHTML = current.text; // Changed to innerHTML to render HTML tags
+            
+            // Show/hide continue indicator
+            continueIndicator.style.display = 'block';
+            choicesContainer.classList.remove('visible');
+        }
+
+        function advanceDialogue() {
+            playClickSound();
+            game.currentDialogueIndex++;
+            showDialogue();
+        }
+
+        function handleSceneEnd() {
+            continueIndicator.style.display = 'none';
+
+            // Determine what happens next based on the scene
+            switch (game.currentScene) {
+                case 'bar':
+                    loadScene('street');
+                    break;
+                
+                case 'street':
+                    showChoices([
+                        { text: "Follow Meg's instructions and go West", action: () => {
+                            game.pathTaken.street = 'west';
+                            loadScene('gym');
+                        }},
+                        { text: "Assume Meg has no idea where she or anything else is, and go East", action: () => {
+                            game.pathTaken.street = 'east';
+                            loadScene('forum');
+                        }}
+                    ]);
+                    break;
+                
+                case 'gym':
+                    // If player made a choice, go to factory
+                    // Otherwise show choices
+                    if (game.pathTaken.gym === 'complete') {
+                        loadScene('factory');
+                    } else {
+                        showChoices([
+                            { text: "Back away slowly", action: () => gymChoice() },
+                            { text: "Back away quickly", action: () => gymChoice() },
+                            { text: "Reason with him", action: () => gymChoice() }
+                        ]);
+                    }
+                    break;
+                
+                case 'forum':
+                    loadScene('factory');
+                    break;
+                
+                case 'factory':
+                    showChoices([
+                        { text: "Go in through the side entrance", action: () => {
+                            game.pathTaken.factory = 'side';
+                            loadScene('workshop');
+                        }},
+                        { text: "Go in through the window", action: () => {
+                            game.pathTaken.factory = 'window';
+                            loadScene('hallway');
+                        }}
+                    ]);
+                    break;
+                
+                case 'workshop':
+                case 'hallway':
+                    loadScene('office');
+                    break;
+                
+                case 'office':
+                    showChoices([
+                        { text: "It's Sharakin' time", action: () => officeWrongChoice("Sharakos: [I ACTUALLY REALLY LIKE THAT BUT LET'S WORKSHOP IT.]") },
+                        { text: "I have no mouth and I must scream", action: () => officeWrongChoice("JD: [Even I won't plagiarise that blatantly.]") },
+                        { text: "I have no voice. My voice is their voice.", action: () => officeCorrectChoice() }
+                    ]);
+                    break;
+                
+                case 'officeEnd':
+                    loadScene('barFinale');
+                    break;
+                
+                case 'barFinale':
+                    showCredits();
+                    break;
+            }
+        }
+
+        function gymChoice() {
+            // All gym choices lead to the same outcome
+            choicesContainer.classList.remove('visible'); // Hide choices using class, not inline style
+            
+            // Add the post-choice dialogue to the gym scene
+            game.dialogue = game.dialogue.concat([
+                { speaker: 'Chad', sprite: 'chad', position: 'right', text: "Man fuck those dialogue options! You've got to be #Shredicated" },
+                { speaker: 'Narrator', sprite: null, position: null, text: "[The painstaking pumping of iron ensues]" }
+            ]);
+            
+            game.choices = [];
+            game.pathTaken.gym = 'complete'; // Mark gym as complete
+            game.currentRightCharacter = 'chad'; // Keep Chad visible
+            dialogueBox.style.display = 'flex'; // Show dialogue box
+            showDialogue();
+        }
+
+        function officeWrongChoice(response) {
+            // Show the response and present choices again
+            dialogueText.innerHTML = response; // Changed to innerHTML to render HTML tags
+            continueIndicator.style.display = 'none';
+            
+            setTimeout(() => {
+                handleSceneEnd(); // Show choices again
+            }, 2000);
+        }
+
+        function officeCorrectChoice() {
+            loadScene('officeEnd');
+        }
+
+        function showChoices(choices) {
+            game.choices = choices;
+            choicesContainer.innerHTML = '';
+            choicesContainer.style.display = ''; // Clear any inline display style
+            choicesContainer.classList.add('visible');
+            continueIndicator.style.display = 'none';
+
+            choices.forEach((choice, index) => {
+                const button = document.createElement('button');
+                button.className = 'choice-button';
+                button.textContent = choice.text;
+                button.addEventListener('click', () => {
+                    playChoiceSound();
+                    choice.action();
+                });
+                choicesContainer.appendChild(button);
+            });
+        }
+
+        function showCredits() {
+            dialogueBox.classList.remove('visible');
+            creditsScreen.classList.add('visible');
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                if (dialogueBox.classList.contains('visible') && game.choices.length === 0) {
+                    advanceDialogue();
+                }
+            }
+        }
+
+        // Start the game
+        init();
+    </script>
+</body>
+</html>
